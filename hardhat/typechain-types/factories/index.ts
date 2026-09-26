@@ -2,4 +2,5 @@
 /* tslint:disable */
 /* eslint-disable */
 export { Campaign__factory } from "./Campaign__factory";
+export { Crowdfund__factory } from "./Crowdfund__factory";
 export { CrowdfundFactory__factory } from "./CrowdfundFactory__factory";

@@ -2,7 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 export type { Campaign } from "./Campaign";
+export type { Crowdfund } from "./Crowdfund";
 export type { CrowdfundFactory } from "./CrowdfundFactory";
 export * as factories from "./factories";
 export { Campaign__factory } from "./factories/Campaign__factory";
+export { Crowdfund__factory } from "./factories/Crowdfund__factory";
 export { CrowdfundFactory__factory } from "./factories/CrowdfundFactory__factory";

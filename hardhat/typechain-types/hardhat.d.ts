@@ -18,6 +18,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Campaign__factory>;
     getContractFactory(
+      name: "Crowdfund",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.Crowdfund__factory>;
+    getContractFactory(
       name: "CrowdfundFactory",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.CrowdfundFactory__factory>;
@@ -28,6 +32,11 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.Campaign>;
     getContractAt(
+      name: "Crowdfund",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.Crowdfund>;
+    getContractAt(
       name: "CrowdfundFactory",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -38,6 +47,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Campaign>;
     deployContract(
+      name: "Crowdfund",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.Crowdfund>;
+    deployContract(
       name: "CrowdfundFactory",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.CrowdfundFactory>;
@@ -47,6 +60,11 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Campaign>;
+    deployContract(
+      name: "Crowdfund",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.Crowdfund>;
     deployContract(
       name: "CrowdfundFactory",
       args: any[],

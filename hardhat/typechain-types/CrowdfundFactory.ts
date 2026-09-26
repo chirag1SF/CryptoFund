@@ -129,7 +129,7 @@ export interface CrowdfundFactory extends BaseContract {
   ): Promise<this>;
 
   createCampaign: TypedContractMethod<
-    [_goal: BigNumberish, _durationInDays: BigNumberish],
+    [_goal: BigNumberish, _duration: BigNumberish],
     [string],
     "nonpayable"
   >;
@@ -149,7 +149,7 @@ export interface CrowdfundFactory extends BaseContract {
   getFunction(
     nameOrSignature: "createCampaign"
   ): TypedContractMethod<
-    [_goal: BigNumberish, _durationInDays: BigNumberish],
+    [_goal: BigNumberish, _duration: BigNumberish],
     [string],
     "nonpayable"
   >;

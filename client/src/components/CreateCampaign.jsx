@@ -2,13 +2,13 @@ import React, { useState } from "react";
 import { ethers } from "ethers";
 import { useWeb3 } from "../context/Web3Context";
 
-const FACTORY_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+const FACTORY_ADDRESS = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9";
 const FACTORY_ABI = [
-  "function createCampaign(uint256 _goal, uint256 _durationInDays) external returns (address)",
+  "function createCampaign(uint256 _goal, uint256 _duration) external returns (address)",
   "event CampaignCreated(address indexed campaignAddress, address indexed creator, uint256 goal, uint256 deadline)",
 ];
 
-export function CreateCampaign() {
+export default function CreateCampaign() {
   const { signer, account, connectWallet } = useWeb3();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -37,27 +37,32 @@ export function CreateCampaign() {
 
     setLoading(true);
     try {
-      // 1. Initialize Contract Instance
       const factoryContract = new ethers.Contract(
         FACTORY_ADDRESS,
         FACTORY_ABI,
         signer,
       );
 
-      // 2. Format Parameters for Ethers v6
+      // 1. Convert days input into seconds for Solidity compatibility
       const goalInWei = ethers.parseEther(formData.goalEth);
-      const durationInDays = BigInt(formData.durationDays);
+      const durationInSeconds = BigInt(formData.durationDays) * 86400n; // 86400 seconds = 1 day
 
-      // 3. Trigger Transaction with gasLimit override
+      // 2. Send creation transaction to Hardhat Factory contract
       const tx = await factoryContract.createCampaign(
         goalInWei,
-        durationInDays,
+        durationInSeconds,
         { gasLimit: 3000000 },
       );
 
+      console.log("Transaction sent:", tx.hash);
       const receipt = await tx.wait();
 
-      // 4. Extract new Campaign Address using factoryContract interface
+      // Ensure transaction actually succeeded on-chain before processing logs
+      if (receipt.status === 0) {
+        throw new Error("Transaction reverted on-chain.");
+      }
+
+      // 3. Extract the new child Crowdfund address from event logs
       let deployedContractAddress = null;
 
       for (const log of receipt.logs) {
@@ -69,15 +74,7 @@ export function CreateCampaign() {
             break;
           }
         } catch (err) {
-          // Skip logs that don't match the contract interface
-        }
-      }
-
-      // Fallback check
-      if (!deployedContractAddress && receipt.logs.length > 0) {
-        const lastLog = receipt.logs[receipt.logs.length - 1];
-        if (lastLog.args && lastLog.args[0]) {
-          deployedContractAddress = lastLog.args[0];
+          // Skip logs from other events or contracts
         }
       }
 
@@ -87,7 +84,7 @@ export function CreateCampaign() {
         );
       }
 
-      // 5. Post Metadata to Express API Backend
+      // 4. Save metadata to Express backend
       const response = await fetch("http://localhost:5000/api/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -96,6 +93,8 @@ export function CreateCampaign() {
           creatorAddress: account,
           title: formData.title,
           description: formData.description,
+          goal: formData.goalEth,
+          duration: formData.durationDays,
           imageURL: formData.imageURL,
           category: formData.category,
         }),
@@ -107,9 +106,19 @@ export function CreateCampaign() {
       }
 
       alert(`Campaign successfully created at: ${deployedContractAddress}`);
+
+      // Reset form on success
+      setFormData({
+        title: "",
+        description: "",
+        goalEth: "",
+        durationDays: "",
+        category: "Tech",
+        imageURL: "",
+      });
     } catch (err) {
-      console.error(err);
-      alert(err.message || "Error creating campaign");
+      console.error("Create Campaign Error:", err);
+      alert(err.reason || err.message || "Error creating campaign");
     } finally {
       setLoading(false);
     }
@@ -125,6 +134,7 @@ export function CreateCampaign() {
           <input
             name="title"
             placeholder="Title"
+            value={formData.title}
             onChange={handleChange}
             required
           />
@@ -132,6 +142,7 @@ export function CreateCampaign() {
           <textarea
             name="description"
             placeholder="Description"
+            value={formData.description}
             onChange={handleChange}
             required
           />
@@ -141,6 +152,7 @@ export function CreateCampaign() {
             type="number"
             step="0.01"
             placeholder="Goal (ETH)"
+            value={formData.goalEth}
             onChange={handleChange}
             required
           />
@@ -149,11 +161,16 @@ export function CreateCampaign() {
             name="durationDays"
             type="number"
             placeholder="Duration (Days)"
+            value={formData.durationDays}
             onChange={handleChange}
             required
           />
           <br />
-          <select name="category" onChange={handleChange}>
+          <select
+            name="category"
+            value={formData.category}
+            onChange={handleChange}
+          >
             <option value="Tech">Tech</option>
             <option value="Art">Art</option>
             <option value="DeFi">DeFi</option>
@@ -162,6 +179,7 @@ export function CreateCampaign() {
           <input
             name="imageURL"
             placeholder="Image URL"
+            value={formData.imageURL}
             onChange={handleChange}
             required
           />
