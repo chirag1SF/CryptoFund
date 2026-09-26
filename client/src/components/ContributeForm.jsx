@@ -1,14 +1,14 @@
 import React, { useState } from "react";
 import { ethers } from "ethers";
 
-// Full ABI including standard getters to prevent <unrecognized-selector> errors
+// Fixed ABI matching Crowdfund.sol definitions
 const CrowdfundABI = [
   "function contribute() external payable",
   "function totalRaised() view returns (uint256)",
   "function goal() view returns (uint256)",
   "function deadline() view returns (uint256)",
-  "function creator() view returns (address)",
-  "function state() view returns (uint8)",
+  "function owner() view returns (address)",
+  "function contributions(address) view returns (uint256)",
 ];
 
 export default function ContributeForm({
@@ -36,28 +36,50 @@ export default function ContributeForm({
     try {
       setLoading(true);
 
-      // 1. Connect to user's wallet via Ethers v6
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const userAddress = await signer.getAddress();
 
-      // 2. Connect to the specific Crowdfund contract instance
       const campaignContract = new ethers.Contract(
         campaignAddress,
         CrowdfundABI,
         signer,
       );
 
-      // 3. Send the contribution transaction
-      const tx = await campaignContract.contribute({
-        value: ethers.parseEther(amount),
-      });
+      const value = ethers.parseEther(amount);
+
+      // Simulate the call first (no gas spent, no MetaMask prompt yet).
+      // If the campaign has ended or the goal is already met, this throws
+      // immediately with the contract's actual revert reason, so we never
+      // ask the user to sign and pay gas for a transaction that's
+      // guaranteed to fail on-chain.
+      try {
+        await campaignContract.contribute.staticCall({ value });
+      } catch (simError) {
+        const reason =
+          simError?.reason ||
+          simError?.shortMessage ||
+          simError?.message ||
+          "This contribution would fail on-chain.";
+        alert("Can't contribute right now: " + reason);
+        setLoading(false);
+        return;
+      }
+
+      const tx = await campaignContract.contribute({ value });
 
       console.log("Transaction sent:", tx.hash);
-      const receipt = await tx.wait(); // Wait for Hardhat block confirmation
+      const receipt = await tx.wait();
+
+      // Defensive check: ethers v6 usually throws on a reverted receipt,
+      // but we verify explicitly so a false "success" alert can never
+      // slip through.
+      if (!receipt || receipt.status === 0) {
+        throw new Error("Transaction reverted on-chain.");
+      }
+
       console.log("Transaction mined in block:", receipt.blockNumber);
 
-      // 4. Notify Express backend to record contribution in DB
       try {
         await fetch(
           `http://localhost:5000/api/campaigns/${campaignAddress}/contribute`,

@@ -27,6 +27,18 @@ app.post("/api/campaigns", (req, res) => {
   res.status(201).json({ success: true, campaign: newCampaign });
 });
 
+// DELETE /api/campaigns - Clear all in-memory campaigns
+// Call this after every Hardhat restart/redeploy. Hardhat's local chain
+// resets to genesis on restart, but this in-memory array does not, so old
+// campaign rows keep pointing at contract addresses that no longer exist.
+// Wiping the array here keeps the backend in sync without having to
+// remember to restart the whole server process.
+app.delete("/api/campaigns", (req, res) => {
+  campaigns.length = 0;
+  console.log("All campaigns cleared.");
+  res.status(200).json({ success: true, message: "All campaigns cleared." });
+});
+
 // POST /api/campaigns/:address/contribute - Record contribution
 app.post("/api/campaigns/:address/contribute", (req, res) => {
   const { address } = req.params;

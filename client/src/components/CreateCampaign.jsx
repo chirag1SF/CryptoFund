@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { ethers } from "ethers";
 import { useWeb3 } from "../context/Web3Context";
 
-const FACTORY_ADDRESS = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9";
+const FACTORY_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // Update after deployment
 const FACTORY_ABI = [
   "function createCampaign(uint256 _goal, uint256 _duration) external returns (address)",
   "event CampaignCreated(address indexed campaignAddress, address indexed creator, uint256 goal, uint256 deadline)",
@@ -43,29 +43,26 @@ export default function CreateCampaign() {
         signer,
       );
 
-      // 1. Convert days input into seconds for Solidity compatibility
       const goalInWei = ethers.parseEther(formData.goalEth);
-      const durationInSeconds = BigInt(formData.durationDays) * 86400n; // 86400 seconds = 1 day
+      const durationInSeconds = BigInt(formData.durationDays) * 86400n;
 
-      // 2. Send creation transaction to Hardhat Factory contract
       const tx = await factoryContract.createCampaign(
         goalInWei,
         durationInSeconds,
-        { gasLimit: 3000000 },
       );
 
       console.log("Transaction sent:", tx.hash);
       const receipt = await tx.wait();
 
-      // Ensure transaction actually succeeded on-chain before processing logs
       if (receipt.status === 0) {
         throw new Error("Transaction reverted on-chain.");
       }
 
-      // 3. Extract the new child Crowdfund address from event logs
       let deployedContractAddress = null;
 
       for (const log of receipt.logs) {
+        if (log.address.toLowerCase() !== FACTORY_ADDRESS.toLowerCase())
+          continue;
         try {
           const parsedLog = factoryContract.interface.parseLog(log);
           if (parsedLog && parsedLog.name === "CampaignCreated") {
@@ -74,7 +71,7 @@ export default function CreateCampaign() {
             break;
           }
         } catch (err) {
-          // Skip logs from other events or contracts
+          // Skip logs from other events
         }
       }
 
@@ -84,7 +81,6 @@ export default function CreateCampaign() {
         );
       }
 
-      // 4. Save metadata to Express backend
       const response = await fetch("http://localhost:5000/api/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -105,9 +101,8 @@ export default function CreateCampaign() {
         throw new Error(resData.error || "Failed to save off-chain metadata");
       }
 
-      alert(`Campaign successfully created at: ${deployedContractAddress}`);
+      alert(`Campaign created successfully at: ${deployedContractAddress}`);
 
-      // Reset form on success
       setFormData({
         title: "",
         description: "",
@@ -118,7 +113,12 @@ export default function CreateCampaign() {
       });
     } catch (err) {
       console.error("Create Campaign Error:", err);
-      alert(err.reason || err.message || "Error creating campaign");
+      const errorMessage =
+        err?.reason ||
+        err?.shortMessage ||
+        err?.message ||
+        "Error creating campaign";
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -139,6 +139,7 @@ export default function CreateCampaign() {
             required
           />
           <br />
+          <br />
           <textarea
             name="description"
             placeholder="Description"
@@ -146,6 +147,7 @@ export default function CreateCampaign() {
             onChange={handleChange}
             required
           />
+          <br />
           <br />
           <input
             name="goalEth"
@@ -157,6 +159,7 @@ export default function CreateCampaign() {
             required
           />
           <br />
+          <br />
           <input
             name="durationDays"
             type="number"
@@ -165,6 +168,7 @@ export default function CreateCampaign() {
             onChange={handleChange}
             required
           />
+          <br />
           <br />
           <select
             name="category"
@@ -176,6 +180,7 @@ export default function CreateCampaign() {
             <option value="DeFi">DeFi</option>
           </select>
           <br />
+          <br />
           <input
             name="imageURL"
             placeholder="Image URL"
@@ -183,6 +188,7 @@ export default function CreateCampaign() {
             onChange={handleChange}
             required
           />
+          <br />
           <br />
           <button type="submit" disabled={loading}>
             {loading ? "Deploying & Registering..." : "Create Campaign"}

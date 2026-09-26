@@ -31,10 +31,17 @@ export interface CrowdfundInterface extends Interface {
       | "deadline"
       | "goal"
       | "owner"
+      | "refund"
       | "totalRaised"
+      | "withdraw"
   ): FunctionFragment;
 
-  getEvent(nameOrSignatureOrTopic: "ContributionReceived"): EventFragment;
+  getEvent(
+    nameOrSignatureOrTopic:
+      | "ContributionReceived"
+      | "FundsWithdrawn"
+      | "RefundIssued"
+  ): EventFragment;
 
   encodeFunctionData(
     functionFragment: "contribute",
@@ -47,10 +54,12 @@ export interface CrowdfundInterface extends Interface {
   encodeFunctionData(functionFragment: "deadline", values?: undefined): string;
   encodeFunctionData(functionFragment: "goal", values?: undefined): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
+  encodeFunctionData(functionFragment: "refund", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "totalRaised",
     values?: undefined
   ): string;
+  encodeFunctionData(functionFragment: "withdraw", values?: undefined): string;
 
   decodeFunctionResult(functionFragment: "contribute", data: BytesLike): Result;
   decodeFunctionResult(
@@ -60,13 +69,41 @@ export interface CrowdfundInterface extends Interface {
   decodeFunctionResult(functionFragment: "deadline", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "goal", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "refund", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "totalRaised",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "withdraw", data: BytesLike): Result;
 }
 
 export namespace ContributionReceivedEvent {
+  export type InputTuple = [contributor: AddressLike, amount: BigNumberish];
+  export type OutputTuple = [contributor: string, amount: bigint];
+  export interface OutputObject {
+    contributor: string;
+    amount: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace FundsWithdrawnEvent {
+  export type InputTuple = [owner: AddressLike, amount: BigNumberish];
+  export type OutputTuple = [owner: string, amount: bigint];
+  export interface OutputObject {
+    owner: string;
+    amount: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace RefundIssuedEvent {
   export type InputTuple = [contributor: AddressLike, amount: BigNumberish];
   export type OutputTuple = [contributor: string, amount: bigint];
   export interface OutputObject {
@@ -132,7 +169,11 @@ export interface Crowdfund extends BaseContract {
 
   owner: TypedContractMethod<[], [string], "view">;
 
+  refund: TypedContractMethod<[], [void], "nonpayable">;
+
   totalRaised: TypedContractMethod<[], [bigint], "view">;
+
+  withdraw: TypedContractMethod<[], [void], "nonpayable">;
 
   getFunction<T extends ContractMethod = ContractMethod>(
     key: string | FunctionFragment
@@ -154,8 +195,14 @@ export interface Crowdfund extends BaseContract {
     nameOrSignature: "owner"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
+    nameOrSignature: "refund"
+  ): TypedContractMethod<[], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "totalRaised"
   ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "withdraw"
+  ): TypedContractMethod<[], [void], "nonpayable">;
 
   getEvent(
     key: "ContributionReceived"
@@ -163,6 +210,20 @@ export interface Crowdfund extends BaseContract {
     ContributionReceivedEvent.InputTuple,
     ContributionReceivedEvent.OutputTuple,
     ContributionReceivedEvent.OutputObject
+  >;
+  getEvent(
+    key: "FundsWithdrawn"
+  ): TypedContractEvent<
+    FundsWithdrawnEvent.InputTuple,
+    FundsWithdrawnEvent.OutputTuple,
+    FundsWithdrawnEvent.OutputObject
+  >;
+  getEvent(
+    key: "RefundIssued"
+  ): TypedContractEvent<
+    RefundIssuedEvent.InputTuple,
+    RefundIssuedEvent.OutputTuple,
+    RefundIssuedEvent.OutputObject
   >;
 
   filters: {
@@ -175,6 +236,28 @@ export interface Crowdfund extends BaseContract {
       ContributionReceivedEvent.InputTuple,
       ContributionReceivedEvent.OutputTuple,
       ContributionReceivedEvent.OutputObject
+    >;
+
+    "FundsWithdrawn(address,uint256)": TypedContractEvent<
+      FundsWithdrawnEvent.InputTuple,
+      FundsWithdrawnEvent.OutputTuple,
+      FundsWithdrawnEvent.OutputObject
+    >;
+    FundsWithdrawn: TypedContractEvent<
+      FundsWithdrawnEvent.InputTuple,
+      FundsWithdrawnEvent.OutputTuple,
+      FundsWithdrawnEvent.OutputObject
+    >;
+
+    "RefundIssued(address,uint256)": TypedContractEvent<
+      RefundIssuedEvent.InputTuple,
+      RefundIssuedEvent.OutputTuple,
+      RefundIssuedEvent.OutputObject
+    >;
+    RefundIssued: TypedContractEvent<
+      RefundIssuedEvent.InputTuple,
+      RefundIssuedEvent.OutputTuple,
+      RefundIssuedEvent.OutputObject
     >;
   };
 }

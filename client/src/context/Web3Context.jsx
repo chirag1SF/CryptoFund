@@ -15,6 +15,21 @@ export const Web3Provider = ({ children }) => {
   const [signer, setSigner] = useState(null);
   const [chainId, setChainId] = useState(null);
 
+  const updateWeb3State = useCallback(async (browserProvider) => {
+    try {
+      const currentSigner = await browserProvider.getSigner();
+      const currentAccount = await currentSigner.getAddress();
+      const network = await browserProvider.getNetwork();
+
+      setProvider(browserProvider);
+      setSigner(currentSigner);
+      setAccount(currentAccount);
+      setChainId(network.chainId.toString());
+    } catch (error) {
+      console.error("Error setting up Web3 state:", error);
+    }
+  }, []);
+
   const connectWallet = useCallback(async () => {
     if (!window.ethereum) {
       alert("MetaMask is not installed!");
@@ -23,31 +38,50 @@ export const Web3Provider = ({ children }) => {
 
     try {
       const browserProvider = new ethers.BrowserProvider(window.ethereum);
-      const accounts = await browserProvider.send("eth_requestAccounts", []);
-      const currentSigner = await browserProvider.getSigner();
-      const network = await browserProvider.getNetwork();
-
-      setProvider(browserProvider);
-      setSigner(currentSigner);
-      setAccount(accounts[0]);
-      setChainId(network.chainId.toString());
+      await browserProvider.send("eth_requestAccounts", []);
+      await updateWeb3State(browserProvider);
     } catch (error) {
       console.error("Wallet connection failed:", error);
     }
-  }, []);
+  }, [updateWeb3State]);
 
   useEffect(() => {
-    if (window.ethereum) {
-      window.ethereum.on("accountsChanged", (accounts) => {
-        if (accounts.length > 0) setAccount(accounts[0]);
-        else setAccount(null);
-      });
+    if (!window.ethereum) return;
 
-      window.ethereum.on("chainChanged", () => {
-        window.location.reload();
-      });
-    }
-  }, []);
+    const browserProvider = new ethers.BrowserProvider(window.ethereum);
+
+    browserProvider
+      .send("eth_accounts", [])
+      .then((accounts) => {
+        if (accounts.length > 0) updateWeb3State(browserProvider);
+      })
+      .catch((err) => console.error("Auto connect error:", err));
+
+    const handleAccountsChanged = async (accounts) => {
+      if (accounts.length > 0) {
+        await updateWeb3State(new ethers.BrowserProvider(window.ethereum));
+      } else {
+        setAccount(null);
+        setSigner(null);
+        setProvider(null);
+      }
+    };
+
+    const handleChainChanged = () => window.location.reload();
+
+    window.ethereum.on("accountsChanged", handleAccountsChanged);
+    window.ethereum.on("chainChanged", handleChainChanged);
+
+    return () => {
+      if (window.ethereum.removeListener) {
+        window.ethereum.removeListener(
+          "accountsChanged",
+          handleAccountsChanged,
+        );
+        window.ethereum.removeListener("chainChanged", handleChainChanged);
+      }
+    };
+  }, [updateWeb3State]);
 
   return (
     <Web3Context.Provider
