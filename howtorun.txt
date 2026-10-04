@@ -1,0 +1,20 @@
+terminal 1
+cd client
+npm run dev
+
+terminal 2
+cd hardhat
+npx hardhat node
+
+terminal 3
+cd hardhat
+npx hardhat clean
+npx hardhat compile
+npx hardhat ignition deploy ignition/modules/CrowdfundFactory.js --network localhost
+
+terminal 4
+cd server
+node server.js
+
+
+download metamask extension 
